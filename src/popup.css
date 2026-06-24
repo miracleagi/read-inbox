@@ -1,10 +1,15 @@
 :root {
-  --bg: #f6f5f1;
-  --panel: #ffffff;
-  --ink: #202124;
-  --muted: #666b73;
-  --line: #d9d6cc;
-  --accent: #276a5c;
+  color-scheme: light;
+  --bg: #f7f8fa;
+  --surface: #ffffff;
+  --surface-soft: #f1f5f9;
+  --ink: #17202a;
+  --muted: #657080;
+  --line: #dce3eb;
+  --line-strong: #c6d0dc;
+  --accent: #0f766e;
+  --accent-strong: #0b5f59;
+  --accent-soft: #e6f5f2;
 }
 
 * {
@@ -12,7 +17,7 @@
 }
 
 body {
-  width: 320px;
+  width: 336px;
   margin: 0;
   background: var(--bg);
   color: var(--ink);
@@ -27,8 +32,10 @@ body {
 }
 
 header {
-  border-bottom: 1px solid var(--line);
-  padding-bottom: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  padding: 12px;
 }
 
 h1 {
@@ -38,9 +45,18 @@ h1 {
 }
 
 p {
-  margin: 6px 0 0;
-  color: var(--muted);
+  display: inline-flex;
+  min-height: 24px;
+  align-items: center;
+  margin: 8px 0 0;
+  border: 1px solid #a9d8ce;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
   font-size: 12px;
+  line-height: 1;
+  padding: 0 8px;
+  max-width: 100%;
 }
 
 .actions {
@@ -51,13 +67,32 @@ p {
 }
 
 button {
-  min-height: 38px;
+  min-height: 40px;
   border: 1px solid var(--line);
   border-radius: 6px;
-  background: var(--panel);
+  background: var(--surface);
   color: var(--ink);
   cursor: pointer;
   font: inherit;
+  font-weight: 650;
+  padding: 0 12px;
+  transition:
+    background 140ms ease,
+    border-color 140ms ease,
+    color 140ms ease,
+    box-shadow 140ms ease;
+}
+
+button:hover {
+  border-color: var(--line-strong);
+  background: #fbfcfe;
+}
+
+button:focus-visible,
+input:focus-visible {
+  outline: 3px solid rgba(15, 118, 110, 0.18);
+  outline-offset: 2px;
+  border-color: var(--accent);
 }
 
 button.primary {
@@ -66,23 +101,35 @@ button.primary {
   color: white;
 }
 
+button.primary:hover {
+  border-color: var(--accent-strong);
+  background: var(--accent-strong);
+}
+
 button:disabled {
   opacity: 0.65;
   cursor: wait;
 }
 
 .check {
-  display: flex;
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr);
   gap: 8px;
-  align-items: center;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: var(--surface-soft);
   color: var(--muted);
   font-size: 13px;
+  line-height: 1.4;
+  padding: 10px;
 }
 
 .check input {
   width: 16px;
   height: 16px;
-  margin: 0;
+  margin: 1px 0 0;
+  accent-color: var(--accent);
 }
 
 .secondary {
