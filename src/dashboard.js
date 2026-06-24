@@ -100,16 +100,36 @@ function rowSummary(paper) {
   return [sourceLabel(paper.sourceType), host, arxiv, tags].filter(Boolean).join(" · ");
 }
 
-function metadataScore(paper) {
-  const checks = [paper.sourceUrl, paper.title, paper.authors?.length, paper.abstract, paper.tags?.length];
-  return checks.filter(Boolean).length;
-}
+function metadataState(paper) {
+  const sourceType = paper.sourceType || "web";
+  const hasSource = Boolean(paper.sourceUrl);
+  const hasTitle = Boolean(paper.title && !/^Untitled/i.test(paper.title));
+  const hasSummary = Boolean(paper.abstract || paper.originText);
+  const hasTags = Boolean(paper.tags?.length);
 
-function metadataLabel(paper) {
-  const score = metadataScore(paper);
-  if (score >= 4) return "信息完整";
-  if (score >= 3) return "可阅读";
-  return "需补全";
+  if (["arxiv", "alphaxiv", "doi"].includes(sourceType) || paper.arxivId || paper.doi) {
+    const checks = [hasSource, hasTitle, paper.authors?.length, paper.abstract, hasTags];
+    const score = checks.filter(Boolean).length;
+    if (score >= 4) return { label: "信息完整", className: "good", score };
+    if (score >= 3) return { label: "可阅读", className: "ok", score };
+    return { label: "需补全", className: "weak", score };
+  }
+
+  if (["github", "project", "huggingface", "x"].includes(sourceType)) {
+    const score = [hasSource, hasTitle, hasSummary, hasTags].filter(Boolean).length;
+    if (hasSource && hasTitle && (hasSummary || hasTags)) {
+      return { label: "信息完整", className: "good", score };
+    }
+    if (hasSource && hasTitle) {
+      return { label: "可阅读", className: "ok", score };
+    }
+    return { label: "需补全", className: "weak", score };
+  }
+
+  const score = [hasSource, hasTitle, hasSummary, hasTags].filter(Boolean).length;
+  if (score >= 3) return { label: "信息完整", className: "good", score };
+  if (score >= 2) return { label: "可阅读", className: "ok", score };
+  return { label: "需补全", className: "weak", score };
 }
 
 function sortedPapers(papers) {
@@ -210,8 +230,7 @@ function paperRow(paper) {
   const tags = (paper.tags || []).slice(0, 4).map((tag) => `<span class="tag">${escapeHtml(tag)}</span>`).join("");
   const summary = escapeHtml(rowSummary(paper)).slice(0, 220);
   const host = hostFromUrl(paper.sourceUrl);
-  const quality = metadataLabel(paper);
-  const qualityClass = metadataScore(paper) >= 4 ? "good" : metadataScore(paper) >= 3 ? "ok" : "weak";
+  const quality = metadataState(paper);
 
   return `
     <button class="paper-row ${active}" data-select="${paper.id}">
@@ -226,7 +245,7 @@ function paperRow(paper) {
           <span>${escapeHtml(authors || paper.arxivId || paper.sourceType || "paper")}</span>
           ${host ? `<span>${escapeHtml(host)}</span>` : ""}
           <span>${STATUS_LABELS[paper.status] || paper.status}</span>
-          <span class="quality ${qualityClass}">${quality}</span>
+          <span class="quality ${quality.className}">${quality.label}</span>
           <span>${formatDate(paper.publishedAt || paper.addedAt)}</span>
         </div>
       </div>
