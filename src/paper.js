@@ -1,4 +1,4 @@
-import { loadStore, saveStore } from "./storage.js";
+import { deletionIdentities, loadStore, paperIdentities, saveStore } from "./storage.js";
 
 const ARXIV_API = "https://export.arxiv.org/api/query";
 const KNOWN_TOPIC_TAGS = [
@@ -654,6 +654,10 @@ export async function upsertPaper(input, options = {}) {
   const store = await loadStore();
   const incoming = options.enrich ? await enrichPaper(input) : input;
   incoming.key = paperKey(incoming);
+  const incomingIdentities = new Set(paperIdentities(incoming));
+  store.deletedPapers = (store.deletedPapers || []).filter(
+    (deletion) => !deletionIdentities(deletion).some((identity) => incomingIdentities.has(identity))
+  );
   const index = store.papers.findIndex((paper) => paper.key === incoming.key);
   const created = index === -1;
 
@@ -695,7 +699,19 @@ export async function updatePaper(id, patch) {
 
 export async function deletePaper(id) {
   const store = await loadStore();
-  store.papers = store.papers.filter((paper) => paper.id !== id);
+  const target = store.papers.find((paper) => paper.id === id);
+  const deletedAt = now();
+  const targetIdentities = new Set(paperIdentities(target || { id }));
+  store.papers = store.papers.filter((paper) => {
+    if (paper.id === id) return false;
+    return !paperIdentities(paper).some((identity) => targetIdentities.has(identity));
+  });
+  store.deletedPapers = [
+    ...(store.deletedPapers || []).filter(
+      (deletion) => !deletionIdentities(deletion).some((identity) => targetIdentities.has(identity))
+    ),
+    ...[...targetIdentities].map((identity) => ({ identity, deletedAt }))
+  ];
   await saveStore(store);
 }
 

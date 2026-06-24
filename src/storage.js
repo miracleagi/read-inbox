@@ -3,10 +3,12 @@ const LOCAL_SERVER = "http://127.0.0.1:8137";
 
 const defaultStore = {
   papers: [],
+  deletedPapers: [],
   settings: {
     createdAt: new Date().toISOString()
   }
 };
+const DELETED_PAPERS_LIMIT = 2000;
 
 function canUseChromeStorage() {
   return Boolean(globalThis.chrome?.storage?.local);
@@ -27,18 +29,57 @@ function cloneStore(store) {
   return {
     ...defaultStore,
     ...store,
-    papers: Array.isArray(store?.papers) ? store.papers : []
+    papers: Array.isArray(store?.papers) ? store.papers : [],
+    deletedPapers: Array.isArray(store?.deletedPapers) ? store.deletedPapers : []
   };
 }
 
-function paperIdentity(paper) {
+function normalizeIdentity(identity) {
+  return String(identity || "").trim().toLowerCase();
+}
+
+export function paperIdentities(paper) {
   return [
     paper?.key,
     paper?.arxivId ? `arxiv:${paper.arxivId}` : "",
     paper?.doi ? `doi:${paper.doi}` : "",
     paper?.sourceUrl ? `url:${paper.sourceUrl}` : "",
     paper?.id ? `id:${paper.id}` : ""
-  ].find(Boolean);
+  ]
+    .map(normalizeIdentity)
+    .filter(Boolean)
+    .filter((identity, index, identities) => identities.indexOf(identity) === index);
+}
+
+function paperIdentity(paper) {
+  return paperIdentities(paper)[0];
+}
+
+export function deletionIdentities(deletion) {
+  const directIdentities = [
+    deletion?.identity,
+    ...(Array.isArray(deletion?.identities) ? deletion.identities : [])
+  ].map(normalizeIdentity);
+  return [...directIdentities, ...paperIdentities(deletion)]
+    .filter(Boolean)
+    .filter((identity, index, identities) => identities.indexOf(identity) === index);
+}
+
+function mergeDeletedPapers(stores) {
+  const deleted = new Map();
+
+  for (const store of stores) {
+    for (const deletion of store.deletedPapers || []) {
+      for (const identity of deletionIdentities(deletion)) {
+        const deletedAt = deletion?.deletedAt || new Date().toISOString();
+        deleted.set(identity, { identity, deletedAt });
+      }
+    }
+  }
+
+  return [...deleted.values()]
+    .sort((a, b) => new Date(b.deletedAt || 0) - new Date(a.deletedAt || 0))
+    .slice(0, DELETED_PAPERS_LIMIT);
 }
 
 function mergePaperRecord(existing, incoming) {
@@ -56,17 +97,23 @@ function mergePaperRecord(existing, incoming) {
 function mergeStores(...stores) {
   const merged = cloneStore(null);
   const papers = new Map();
+  const normalizedStores = stores.filter(Boolean).map(cloneStore);
+  const deletedPapers = mergeDeletedPapers(normalizedStores);
+  const deletedIdentities = new Set(deletedPapers.flatMap(deletionIdentities));
 
-  for (const store of stores.filter(Boolean).map(cloneStore)) {
+  for (const store of normalizedStores) {
     merged.settings = { ...merged.settings, ...(store.settings || {}) };
     for (const paper of store.papers || []) {
-      const identity = paperIdentity(paper);
+      const identities = paperIdentities(paper);
+      if (identities.some((identity) => deletedIdentities.has(identity))) continue;
+      const identity = identities[0];
       if (!identity) continue;
       papers.set(identity, mergePaperRecord(papers.get(identity), paper));
     }
   }
 
   merged.papers = [...papers.values()].sort((a, b) => new Date(b.addedAt || 0) - new Date(a.addedAt || 0));
+  merged.deletedPapers = deletedPapers;
   return merged;
 }
 
