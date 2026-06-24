@@ -202,6 +202,81 @@ export function xTitleText(title) {
   return parseXTitle(title).text;
 }
 
+const GITHUB_NON_REPO_PATHS = new Set([
+  "about",
+  "collections",
+  "customer-stories",
+  "events",
+  "explore",
+  "features",
+  "marketplace",
+  "new",
+  "notifications",
+  "orgs",
+  "pricing",
+  "pulls",
+  "search",
+  "settings",
+  "sponsors",
+  "topics",
+  "trending"
+]);
+
+function githubRepoPath(url) {
+  try {
+    const parsed = new URL(String(url || ""));
+    if (parsed.hostname.toLowerCase() !== "github.com") return "";
+    const [owner, repo] = parsed.pathname.split("/").filter(Boolean);
+    if (!owner || !repo || GITHUB_NON_REPO_PATHS.has(owner.toLowerCase())) return "";
+    return `${owner}/${repo.replace(/\.git$/i, "")}`;
+  } catch {
+    return "";
+  }
+}
+
+function stripGitHubTitleChrome(title) {
+  return normalizeWhitespace(title)
+    .replace(/^GitHub\s*[-–—]\s*/i, "")
+    .replace(/\s*[-–—|·]\s*GitHub\s*$/i, "");
+}
+
+function parseGitHubTitle(title, url) {
+  const repoPath = githubRepoPath(url);
+  const value = stripGitHubTitleChrome(title);
+  if (!repoPath) return { title: value, text: "", compact: false };
+  if (!value || value === url) return { title: repoPath, text: "", compact: true };
+
+  const lowerValue = value.toLowerCase();
+  const lowerRepo = repoPath.toLowerCase();
+  if (lowerValue === lowerRepo) return { title: repoPath, text: "", compact: false };
+
+  if (lowerValue.startsWith(lowerRepo)) {
+    const rest = value.slice(repoPath.length).trim();
+    const description = stripOuterQuotes(rest.replace(/^[:\-–—]\s*/, ""));
+    if (description) {
+      return {
+        title: repoPath,
+        text: description,
+        compact: true
+      };
+    }
+  }
+
+  return {
+    title: value,
+    text: "",
+    compact: false
+  };
+}
+
+export function cleanGitHubTitle(title, url) {
+  return parseGitHubTitle(title, url).title || githubRepoPath(url) || "GitHub repository";
+}
+
+export function githubTitleText(title, url) {
+  return parseGitHubTitle(title, url).text;
+}
+
 export function isResearchProjectUrl(input) {
   try {
     const url = new URL(String(input || ""));
@@ -257,6 +332,9 @@ export function cleanTitle(title, url = "") {
   if (isXUrl(url)) {
     return cleanXTitle(title);
   }
+  if (githubRepoPath(url)) {
+    return cleanGitHubTitle(title, url);
+  }
 
   const value = normalizeWhitespace(title)
     .replace(/\s*-\s*arXiv\.org\s*$/i, "")
@@ -302,6 +380,7 @@ export function repairPaperLinks(paper) {
   const arxivId = repaired.arxivId || extractArxivId([repaired.sourceUrl, repaired.title, repaired.originText].join(" "));
   const doi = repaired.doi || extractDoi([repaired.sourceUrl, repaired.title, repaired.originText].join(" "));
   const sourceType = inferSourceType(repaired.sourceUrl);
+  const githubTitle = sourceType === "github" ? parseGitHubTitle(repaired.title, repaired.sourceUrl) : null;
 
   if (arxivId) {
     repaired.arxivId = arxivId;
@@ -319,6 +398,13 @@ export function repairPaperLinks(paper) {
   }
   if (!STATUS_LABELS[repaired.status]) {
     repaired.status = "inbox";
+  }
+
+  if (githubTitle?.compact) {
+    repaired.title = githubTitle.title;
+    if (!repaired.originText && githubTitle.text) {
+      repaired.originText = githubTitle.text.slice(0, 800);
+    }
   }
 
   repaired.key = paperKey(repaired);
@@ -341,6 +427,7 @@ export function paperFromUrl(url, title = "", options = {}) {
 
   const normalizedTitle = cleanTitle(title, sourceUrl || rawSourceUrl);
   const xPostText = rawSourceType === "x" ? xTitleText(title) : "";
+  const githubDescription = rawSourceType === "github" ? githubTitleText(title, sourceUrl || rawSourceUrl) : "";
   const originUrl = options.originUrl ? normalizeUrl(options.originUrl) : "";
   const sourceType = options.sourceType || inferSourceType(originUrl || sourceUrl);
   const paper = {
@@ -356,13 +443,13 @@ export function paperFromUrl(url, title = "", options = {}) {
     sourceType,
     originUrl,
     originTitle: normalizeWhitespace(options.originTitle || ""),
-    originText: normalizeWhitespace(options.originText || xPostText).slice(0, 800),
+    originText: normalizeWhitespace(options.originText || xPostText || githubDescription).slice(0, 800),
     status: "inbox",
     priority: "medium",
     tags: [
       ...new Set([
         ...(options.tags || []),
-        ...guessTags(`${normalizedTitle} ${sourceUrl} ${options.originText || ""} ${xPostText}`)
+        ...guessTags(`${normalizedTitle} ${sourceUrl} ${options.originText || ""} ${xPostText} ${githubDescription}`)
       ])
     ],
     planned: false,
