@@ -63,4 +63,4 @@ openDashboardButton.addEventListener("click", async () => {
 
 loadStore()
   .then(() => setStatus("Ready"))
-  .catch(() => setStatus("Ready"));
+  .catch((error) => setStatus(error.message || "Local service unavailable"));

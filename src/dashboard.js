@@ -73,6 +73,10 @@ function timestamp(value) {
   return Number.isNaN(time) ? 0 : time;
 }
 
+function operationError(error, fallback = "操作失败") {
+  return error?.message || fallback;
+}
+
 function sourceLabel(sourceType) {
   return SOURCE_LABELS[sourceType] || sourceType || "Web";
 }
@@ -483,12 +487,20 @@ function render() {
 }
 
 async function refresh(options = {}) {
-  const store = await loadStore();
-  const repairedPapers = (store.papers || []).map(repairPaperLinks);
-  if (JSON.stringify(repairedPapers) !== JSON.stringify(store.papers || [])) {
-    await saveStore({ ...store, papers: repairedPapers });
+  try {
+    const hadStoreError = state.notice.includes("本地服务不可用");
+    const store = await loadStore();
+    const repairedPapers = (store.papers || []).map(repairPaperLinks);
+    if (JSON.stringify(repairedPapers) !== JSON.stringify(store.papers || [])) {
+      await saveStore({ ...store, papers: repairedPapers });
+    }
+    state.papers = repairedPapers;
+    if (hadStoreError) state.notice = "";
+  } catch (error) {
+    state.papers = [];
+    state.notice = operationError(error, "本地服务不可用");
   }
-  state.papers = repairedPapers;
+
   if (options.keepSelection !== true && !state.papers.some((paper) => paper.id === state.selectedId)) {
     state.selectedId = "";
   }
@@ -554,12 +566,14 @@ function queueFieldSave(paperId, field, value, delay = FIELD_SAVE_DELAY) {
         .then(() => updatePaper(paperId, { [field]: value }))
         .catch((error) => {
           console.error("Paper field save failed", error);
+          state.notice = operationError(error, "保存失败");
+          render();
         });
     }, delay)
   );
 }
 
-app.addEventListener("click", async (event) => {
+async function handleClick(event) {
   const target = event.target.closest("button, a");
   if (!target) return;
 
@@ -664,13 +678,29 @@ app.addEventListener("click", async (event) => {
     state.selectedId = "";
     await refresh();
   }
+}
+
+app.addEventListener("click", async (event) => {
+  try {
+    await handleClick(event);
+  } catch (error) {
+    state.busy = false;
+    state.notice = operationError(error);
+    render();
+  }
 });
 
 app.addEventListener("submit", async (event) => {
   if (event.target.id !== "add-form") return;
   event.preventDefault();
   const input = app.querySelector("#url-input");
-  await handleAddUrl(input.value);
+  try {
+    await handleAddUrl(input.value);
+  } catch (error) {
+    state.busy = false;
+    state.notice = operationError(error, "添加失败");
+    render();
+  }
 });
 
 app.addEventListener("input", (event) => {

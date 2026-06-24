@@ -24,7 +24,7 @@ Paper Inbox 是一个本地优先的论文阅读队列 MVP，用来把 Chrome �
 4. 选择克隆后的项目目录，例如：`/path/to/read-inbox`
 5. 固定 Paper Inbox 扩展
 
-如果本地 `node server.js` 正在运行，扩展会优先同步到 `http://127.0.0.1:8137`，这样扩展弹窗和本地 Dashboard 会读写同一份 `.paper-inbox-data.json`。如果服务器没开，扩展会退回到 `chrome.storage.local`；从扩展弹窗打开的 Dashboard 会读写这份扩展数据。
+扩展和本地 Dashboard 都只读写 `http://127.0.0.1:8137` 背后的 `.paper-inbox-data.json`。使用扩展前需要先启动本地服务；如果服务没开，扩展弹窗和 Dashboard 会提示本地服务不可用，不会再写入 `chrome.storage.local` 或浏览器 `localStorage`。
 
 ## 作为本地网页使用
 
@@ -40,7 +40,7 @@ node server.js
 http://127.0.0.1:8137/dashboard.html
 ```
 
-网页模式的数据通过 `server.js` 写入 `.paper-inbox-data.json`。这也是扩展在本地服务器运行时会同步的同一份数据。
+网页模式的数据通过 `server.js` 写入 `.paper-inbox-data.json`。扩展也使用这同一份数据，避免多存储源合并导致已删除条目重新出现。
 
 `server.js` 还提供 `/api/arxiv/:id`，用于绕过普通网页模式下浏览器对 arXiv API 的跨域限制。
 
@@ -141,3 +141,4 @@ curl -X DELETE http://127.0.0.1:8137/api/store
 - planned
 - savedReason
 - notes
+- addedAt / updatedAt
