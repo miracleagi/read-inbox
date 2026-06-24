@@ -58,7 +58,11 @@ function formatDate(value) {
   try {
     const date = new Date(value);
     if (Number.isNaN(date.getTime())) return "";
-    return new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit" }).format(date);
+    return new Intl.DateTimeFormat("zh-CN", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).format(date);
   } catch {
     return "";
   }
