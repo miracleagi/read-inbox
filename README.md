@@ -59,6 +59,71 @@ logs/server.out.log
 logs/server.err.log
 ```
 
+## 常用命令
+
+在前台临时启动本地服务：
+
+```sh
+node server.js
+```
+
+使用其他端口启动：
+
+```sh
+PORT=8147 node server.js
+```
+
+检查服务是否可用：
+
+```sh
+curl http://127.0.0.1:8137/api/store
+```
+
+首次安装 macOS LaunchAgent：
+
+```sh
+mkdir -p logs ~/Library/LaunchAgents
+sed "s#/path/to/read-inbox#$(pwd)#g" launchd/com.paper-inbox.server.plist > ~/Library/LaunchAgents/com.paper-inbox.server.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.paper-inbox.server.plist
+```
+
+重启常驻服务：
+
+```sh
+launchctl kickstart -k gui/$(id -u)/com.paper-inbox.server
+```
+
+查看常驻服务状态：
+
+```sh
+launchctl print gui/$(id -u)/com.paper-inbox.server
+```
+
+停止并卸载常驻服务：
+
+```sh
+launchctl bootout gui/$(id -u) ~/Library/LaunchAgents/com.paper-inbox.server.plist
+```
+
+查看服务日志：
+
+```sh
+tail -f logs/server.out.log logs/server.err.log
+```
+
+备份本地数据到仓库外：
+
+```sh
+mkdir -p ~/paper-inbox-backups
+cp .paper-inbox-data.json ~/paper-inbox-backups/paper-inbox-data-$(date +%F).json
+```
+
+清空本地服务数据：
+
+```sh
+curl -X DELETE http://127.0.0.1:8137/api/store
+```
+
 ## 数据模型
 
 每篇论文包含：
