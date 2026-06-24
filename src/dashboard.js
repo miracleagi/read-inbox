@@ -394,7 +394,7 @@ function render() {
       <main class="main">
         <header class="topbar">
           <form class="add-form" id="add-form">
-            <input id="url-input" placeholder="https://arxiv.org/abs/..." autocomplete="off" />
+            <input id="url-input" placeholder="https://arxiv.org/abs/... 或 /html/..." autocomplete="off" />
             <button type="submit">添加</button>
           </form>
           <input id="search-input" class="search" value="${escapeHtml(state.query)}" placeholder="搜索" />

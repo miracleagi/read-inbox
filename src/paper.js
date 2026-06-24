@@ -112,12 +112,12 @@ export function extractArxivId(input) {
   const text = String(input || "");
   const decoded = safeDecodeURIComponent(text);
   const modern = decoded.match(
-    /(?:(?:arxiv\.org|alphaxiv\.org)\/(?:abs|pdf)\/|arXiv\s*:?\s*)(\d{4}\.\d{4,5})(?:v\d+)?(?:\.pdf)?/i
+    /(?:(?:arxiv\.org|alphaxiv\.org)\/(?:abs|pdf|html)\/|arXiv\s*:?\s*)(\d{4}\.\d{4,5})(?:v\d+)?(?:\.pdf)?/i
   );
   if (modern) return stripArxivVersion(modern[1]);
 
   const oldStyle = decoded.match(
-    /(?:(?:arxiv\.org|alphaxiv\.org)\/(?:abs|pdf)\/|arXiv\s*:?\s*)([a-z-]+(?:\.[A-Z]{2})?\/\d{7})(?:v\d+)?(?:\.pdf)?/i
+    /(?:(?:arxiv\.org|alphaxiv\.org)\/(?:abs|pdf|html)\/|arXiv\s*:?\s*)([a-z-]+(?:\.[A-Z]{2})?\/\d{7})(?:v\d+)?(?:\.pdf)?/i
   );
   if (oldStyle) return stripArxivVersion(oldStyle[1]);
 
@@ -179,7 +179,7 @@ export function paperUrlsFromText(input) {
   const text = String(input || "");
   const urls = new Set();
   const urlPattern =
-    /(?:https?:\/\/)?(?:www\.)?(?:arxiv\.org\/(?:abs|pdf)\/[^\s<>"']+|doi\.org\/10\.\d{4,9}\/[^\s<>"']+)/gi;
+    /(?:https?:\/\/)?(?:www\.)?(?:arxiv\.org\/(?:abs|pdf|html)\/[^\s<>"']+|doi\.org\/10\.\d{4,9}\/[^\s<>"']+)/gi;
   const arxivPattern = /arXiv\s*:?\s*(\d{4}\.\d{4,5}|[a-z-]+(?:\.[A-Z]{2})?\/\d{7})(?:v\d+)?/gi;
   const doiPattern = /\b(10\.\d{4,9}\/[-._;()/:A-Z0-9]+)\b/gi;
 
