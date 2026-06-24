@@ -48,6 +48,12 @@ function normalizeWhitespace(value) {
   return String(value || "").replace(/\s+/g, " ").trim();
 }
 
+function truncateText(value, maxLength) {
+  const text = normalizeWhitespace(value);
+  if (text.length <= maxLength) return text;
+  return `${text.slice(0, maxLength - 3).trim()}...`;
+}
+
 function safeDecodeURIComponent(value) {
   try {
     return decodeURIComponent(value);
@@ -150,6 +156,52 @@ export function isXUrl(url) {
   return /^https?:\/\/(?:mobile\.|www\.)?(?:x\.com|twitter\.com)\//i.test(String(url || ""));
 }
 
+function stripXTitleChrome(title) {
+  return normalizeWhitespace(title)
+    .replace(/^\(\d+\)\s*/, "")
+    .replace(/\s*(?:\/|-)\s*(?:X|Twitter)\s*$/i, "");
+}
+
+function stripOuterQuotes(value) {
+  return normalizeWhitespace(value)
+    .replace(/^["'“”‘’]+/, "")
+    .replace(/["'“”‘’]+$/, "")
+    .trim();
+}
+
+function parseXTitle(title) {
+  const value = stripXTitleChrome(title);
+  if (!value) return { title: "", text: "" };
+
+  const patterns = [/^(.{1,80}?)\s+on\s+(?:X|Twitter):\s*(.+)$/i, /^([^:]{1,80}):\s*(.+)$/];
+  for (const pattern of patterns) {
+    const match = value.match(pattern);
+    if (!match) continue;
+
+    const author = truncateText(match[1], 48);
+    const text = stripOuterQuotes(match[2]);
+    if (author && text) {
+      return {
+        title: `${author} on X`,
+        text
+      };
+    }
+  }
+
+  return {
+    title: truncateText(value, 96),
+    text: value.length > 96 ? value : ""
+  };
+}
+
+export function cleanXTitle(title, fallback = "X post") {
+  return parseXTitle(title).title || fallback;
+}
+
+export function xTitleText(title) {
+  return parseXTitle(title).text;
+}
+
 export function isResearchProjectUrl(input) {
   try {
     const url = new URL(String(input || ""));
@@ -202,6 +254,10 @@ export function paperUrlsFromText(input) {
 }
 
 export function cleanTitle(title, url = "") {
+  if (isXUrl(url)) {
+    return cleanXTitle(title);
+  }
+
   const value = normalizeWhitespace(title)
     .replace(/\s*-\s*arXiv\.org\s*$/i, "")
     .replace(/\s*\|\s*arXiv.*$/i, "")
@@ -284,6 +340,7 @@ export function paperFromUrl(url, title = "", options = {}) {
   }
 
   const normalizedTitle = cleanTitle(title, sourceUrl || rawSourceUrl);
+  const xPostText = rawSourceType === "x" ? xTitleText(title) : "";
   const originUrl = options.originUrl ? normalizeUrl(options.originUrl) : "";
   const sourceType = options.sourceType || inferSourceType(originUrl || sourceUrl);
   const paper = {
@@ -299,10 +356,15 @@ export function paperFromUrl(url, title = "", options = {}) {
     sourceType,
     originUrl,
     originTitle: normalizeWhitespace(options.originTitle || ""),
-    originText: normalizeWhitespace(options.originText || "").slice(0, 800),
+    originText: normalizeWhitespace(options.originText || xPostText).slice(0, 800),
     status: "inbox",
     priority: "medium",
-    tags: [...new Set([...(options.tags || []), ...guessTags(`${normalizedTitle} ${sourceUrl} ${options.originText || ""}`)])],
+    tags: [
+      ...new Set([
+        ...(options.tags || []),
+        ...guessTags(`${normalizedTitle} ${sourceUrl} ${options.originText || ""} ${xPostText}`)
+      ])
+    ],
     planned: false,
     notes: "",
     savedReason: normalizeWhitespace(options.savedReason || ""),

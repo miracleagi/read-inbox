@@ -2,13 +2,15 @@ import { loadStore, saveStore, clearStore } from "./storage.js";
 import {
   STATUS_LABELS,
   PRIORITY_LABELS,
+  cleanXTitle,
   deletePaper,
   enrichPaper,
   importPapersFromUrls,
   paperFromUrl,
   repairPaperLinks,
   updatePaper,
-  upsertPaper
+  upsertPaper,
+  xTitleText
 } from "./paper.js";
 
 const app = document.querySelector("#app");
@@ -73,6 +75,10 @@ function hostFromUrl(value) {
 }
 
 function displayTitle(paper) {
+  if (paper.sourceType === "x") {
+    return cleanXTitle(paper.title);
+  }
+
   return String(paper.title || "Untitled")
     .replace(/^\(\d+\)\s*/, "")
     .replace(/\s*\/\s*X\s*$/i, "")
@@ -83,6 +89,10 @@ function displayTitle(paper) {
 function rowSummary(paper) {
   if (paper.abstract) return paper.abstract;
   if (paper.originText) return paper.originText;
+  if (paper.sourceType === "x") {
+    const postText = xTitleText(paper.title);
+    if (postText) return postText;
+  }
 
   const host = hostFromUrl(paper.sourceUrl);
   const arxiv = paper.arxivId ? `arXiv:${paper.arxivId}` : "";
