@@ -56,10 +56,17 @@ function escapeHtml(value) {
 function formatDate(value) {
   if (!value) return "";
   try {
-    return new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit" }).format(new Date(value));
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "";
+    return new Intl.DateTimeFormat("zh-CN", { month: "2-digit", day: "2-digit" }).format(date);
   } catch {
     return "";
   }
+}
+
+function timestamp(value) {
+  const time = new Date(value || 0).getTime();
+  return Number.isNaN(time) ? 0 : time;
 }
 
 function sourceLabel(sourceType) {
@@ -137,9 +144,11 @@ function sortedPapers(papers) {
   return [...papers].sort((a, b) => {
     const plannedDelta = Number(Boolean(b.planned)) - Number(Boolean(a.planned));
     if (plannedDelta) return plannedDelta;
+    const addedDelta = timestamp(b.addedAt) - timestamp(a.addedAt);
+    if (addedDelta) return addedDelta;
     const priorityDelta = (weight[a.priority] ?? 1) - (weight[b.priority] ?? 1);
     if (priorityDelta) return priorityDelta;
-    return new Date(b.addedAt || 0) - new Date(a.addedAt || 0);
+    return timestamp(b.updatedAt) - timestamp(a.updatedAt);
   });
 }
 
@@ -231,6 +240,8 @@ function paperRow(paper) {
   const summary = escapeHtml(rowSummary(paper)).slice(0, 220);
   const host = hostFromUrl(paper.sourceUrl);
   const quality = metadataState(paper);
+  const addedDate = formatDate(paper.addedAt);
+  const publishedDate = formatDate(paper.publishedAt);
 
   return `
     <button class="paper-row ${active}" data-select="${paper.id}">
@@ -246,7 +257,8 @@ function paperRow(paper) {
           ${host ? `<span>${escapeHtml(host)}</span>` : ""}
           <span>${STATUS_LABELS[paper.status] || paper.status}</span>
           <span class="quality ${quality.className}">${quality.label}</span>
-          <span>${formatDate(paper.publishedAt || paper.addedAt)}</span>
+          ${addedDate ? `<span>添加 ${addedDate}</span>` : ""}
+          ${publishedDate && publishedDate !== addedDate ? `<span>发布 ${publishedDate}</span>` : ""}
         </div>
       </div>
       <div class="row-side">
