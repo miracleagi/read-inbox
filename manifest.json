@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "Paper Inbox",
+  "description": "Collect arXiv and paper tabs into a local reading queue.",
+  "version": "0.1.0",
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Paper Inbox"
+  },
+  "background": {
+    "service_worker": "src/background.js",
+    "type": "module"
+  },
+  "permissions": ["storage", "tabs", "scripting", "activeTab"],
+  "host_permissions": [
+    "https://arxiv.org/*",
+    "https://export.arxiv.org/*",
+    "https://doi.org/*",
+    "https://github.com/*",
+    "https://gist.github.com/*",
+    "https://*.github.io/*",
+    "https://alphaxiv.org/*",
+    "https://*.alphaxiv.org/*",
+    "https://huggingface.co/*",
+    "https://*.huggingface.co/*",
+    "https://x.com/*",
+    "https://twitter.com/*",
+    "https://t.co/*",
+    "http://127.0.0.1:8137/*",
+    "http://localhost:8137/*"
+  ]
+}

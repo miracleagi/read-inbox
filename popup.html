@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Paper Inbox</title>
+    <link rel="stylesheet" href="./src/popup.css" />
+  </head>
+  <body>
+    <main class="popup">
+      <header>
+        <div>
+          <h1>Paper Inbox</h1>
+          <p id="status">Ready</p>
+        </div>
+      </header>
+
+      <section class="actions">
+        <button id="save-current" class="primary">保存当前页</button>
+        <button id="save-arxiv-tabs">保存所有论文相关标签页</button>
+        <label class="check">
+          <input id="close-tabs" type="checkbox" />
+          <span>保存后关闭已收录标签页</span>
+        </label>
+      </section>
+
+      <section class="actions secondary">
+        <button id="open-dashboard">打开阅读队列</button>
+      </section>
+    </main>
+    <script type="module" src="./src/popup.js"></script>
+  </body>
+</html>
